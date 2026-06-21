@@ -239,14 +239,18 @@
         import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyBxSK0oNoUP1L1OrfxUGTpLNrJxluqiLaA",
-            authDomain: "bunnii-media-2.firebaseapp.com",
-            projectId: "bunnii-media-2",
-            storageBucket: "bunnii-media-2.appspot.com",
-            messagingSenderId: "706339694572",
-            appId: "1:706339694572:web:a7fe3efb4a008b6ea942c9",
-            measurementId: "G-1JEFDCG6GW"
-        };
+  apiKey: "AIzaSyBxSK0oNoUP1L1OrfxUGTpLNrJxluqiLaA",
+  authDomain: "bunnii-media-2.firebaseapp.com",
+  projectId: "bunnii-media-2",
+  storageBucket: "bunnii-media-2.firebasestorage.app",
+  messagingSenderId: "706339694572",
+  appId: "1:706339694572:web:a7fe3efb4a008b6ea942c9",
+  measurementId: "G-1JEFDCG6GW"
+};
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
