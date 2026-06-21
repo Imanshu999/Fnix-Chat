@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fnix Chat</title>
+    <!-- FontAwesome for Modern Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-main: #121b22; --bg-header: #1f2c34; --bg-input: #2a3942;
+            --text-main: #e9edef; --text-muted: #8696a0; --accent: #00a884;
+            --msg-sent: #005c4b; --msg-received: #202c33;
+            --wallpaper: rgba(18, 27, 34, 0.96);
+        }
+
+        .light-theme {
+            --bg-main: #ffffff; --bg-header: #f0f2f5; --bg-input: #ffffff;
+            --text-main: #111b21; --text-muted: #667781; --accent: #008069;
+            --msg-sent: #d9fdd3; --msg-received: #f0f2f5;
+            --wallpaper: rgba(240, 242, 245, 0.96);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; -webkit-tap-highlight-color: transparent; transition: background 0.2s ease, color 0.2s ease; }
+        body, html { width: 100%; height: 100%; background-color: var(--bg-main); color: var(--text-main); overflow: hidden; }
+        .screen { width: 100%; height: 100%; display: flex; flex-direction: column; }
+        .hidden { display: none !important; }
+
+        /* Login Screen with Password */
+        #login-screen { background: linear-gradient(135deg, var(--accent), #121b22); justify-content: center; align-items: center; padding: 20px; }
+        .login-container { background: var(--bg-header); width: 100%; max-width: 360px; padding: 30px; border-radius: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .logo-area i { font-size: 55px; color: var(--accent); margin-bottom: 12px; }
+        .input-group { display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+        .input-group input { width: 100%; padding: 14px; border: 1px solid rgba(255,255,255,0.05); border-radius: 10px; background: var(--bg-input); color: var(--text-main); font-size: 15px; outline: none; }
+        
+        .pwd-wrapper { position: relative; display: flex; align-items: center; }
+        .pwd-wrapper input { padding-right: 40px; }
+        .pwd-wrapper i { position: absolute; right: 15px; color: var(--text-muted); cursor: pointer; font-size: 18px; }
+
+        .login-container button { width: 100%; padding: 14px; background: var(--accent); color: white; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; }
+
+        /* Main Header */
+        .main-header { background-color: var(--bg-header); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: relative; }
+        .app-logo { font-size: 21px; font-weight: 600; }
+        .header-icons { display: flex; gap: 22px; font-size: 18px; color: var(--text-muted); align-items: center; }
+
+        /* Live Search Bar */
+        .search-container { display: none; position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: var(--bg-header); align-items: center; padding: 0 20px; z-index: 5; }
+        .search-container.active { display: flex; }
+        .search-container input { flex: 1; background: transparent; border: none; outline: none; color: var(--text-main); font-size: 16px; padding: 10px; }
+
+        .content-body { flex: 1; overflow-y: auto; padding-bottom: 65px; }
+
+        /* Chat Items */
+        .chat-item { display: flex; padding: 14px 16px; align-items: center; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        .avatar { width: 48px; height: 48px; background: var(--accent); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 18px; color: #fff; cursor: pointer; object-fit: cover; }
+        .chat-info { flex: 1; display: flex; flex-direction: column; gap: 4px; cursor: pointer; }
+        .chat-row { display: flex; justify-content: space-between; align-items: center; }
+        .chat-name { font-weight: 600; font-size: 16px; }
+        .chat-preview { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px; }
+
+        .fab-btn { position: fixed; bottom: 80px; right: 20px; width: 55px; height: 55px; background: var(--accent); border: none; border-radius: 50%; color: white; font-size: 22px; box-shadow: 0 4px 15px rgba(0,0,0,0.4); cursor: pointer; display: flex; justify-content: center; align-items: center; }
+
+        /* Chat Window */
+        .chat-window { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-main); display: flex; flex-direction: column; z-index: 100; }
+        .chat-window-header { background: var(--bg-header); padding: 10px 15px; display: flex; align-items: center; gap: 10px; }
+        .active-user-details { flex: 1; }
+        .chat-bg-overlay { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); background-size: contain; background-blend-mode: overlay; background-color: var(--wallpaper); }
+
+        /* Messages */
+        .msg-bubble { max-width: 75%; padding: 8px 12px; border-radius: 10px; font-size: 15px; word-wrap: break-word; display: flex; flex-direction: column; }
+        .msg-bubble.incoming { background: var(--msg-received); align-self: flex-start; }
+        .msg-bubble.outgoing { background: var(--msg-sent); align-self: flex-end; cursor: pointer; }
+        .msg-meta { font-size: 10px; color: var(--text-muted); align-self: flex-end; margin-top: 4px; }
+        .media-preview-img { max-width: 100%; border-radius: 8px; margin-top: 5px; max-height: 200px; object-fit: cover; }
+
+        /* Footers & Nav */
+        .chat-footer-wrapper { position: relative; display: flex; flex-direction: column; }
+        .chat-input-footer { padding: 10px; display: flex; gap: 8px; align-items: center; background: var(--bg-header); }
+        .input-actions-box { flex: 1; background: var(--bg-input); border-radius: 25px; padding: 5px 15px; display: flex; align-items: center; gap: 12px; }
+        .input-actions-box input { flex: 1; background: transparent; border: none; outline: none; color: white; padding: 10px 0; font-size: 16px; }
+        .input-actions-box i { color: var(--text-muted); font-size: 20px; cursor: pointer; }
+        .action-circle-btn { width: 48px; height: 48px; background: var(--accent); border: none; border-radius: 50%; color: white; font-size: 18px; cursor: pointer; }
+
+        .emoji-tray { background: var(--bg-header); max-height: 180px; overflow-y: auto; display: grid; grid-template-columns: repeat(8, 1fr); padding: 10px; gap: 10px; font-size: 24px; text-align: center; }
+        .emoji-tray span { cursor: pointer; }
+
+        .bottom-nav { position: fixed; bottom: 0; width: 100%; height: 60px; background: var(--bg-header); display: flex; justify-content: space-around; align-items: center; z-index: 10; border-top: 1px solid rgba(255,255,255,0.03); }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); cursor: pointer; font-size: 12px; width: 25%; }
+        .nav-item.active { color: var(--text-main); }
+        .nav-item.active i { color: var(--accent); }
+
+        /* Modals */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: var(--bg-header); padding: 24px; border-radius: 16px; width: 90%; max-width: 350px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .modal-content input { width: 100%; padding: 12px; margin-bottom: 15px; background: var(--bg-input); border: none; border-radius: 8px; color: white; font-size: 15px; outline: none; }
+        .modal-buttons { display: flex; gap: 10px; justify-content: flex-end; }
+        .modal-buttons button { padding: 10px 16px; border: none; border-radius: 6px; font-weight: 500; cursor: pointer; }
+
+        /* Settings Profile Edit Box */
+        .profile-edit-box { background: var(--bg-input); padding: 20px; border-radius: 12px; text-align: center; margin-bottom: 20px; }
+        .profile-edit-box img { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; margin-bottom: 10px; cursor: pointer; border: 2px solid var(--accent); }
+        .profile-edit-box input[type="text"] { width: 100%; padding: 10px; margin-top: 10px; border-radius: 6px; border: none; background: var(--bg-header); color: white; }
+        .profile-edit-box button { margin-top: 15px; width: 100%; padding: 10px; background: var(--accent); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
+
+        /* Contact History Modal (Pop-up) */
+        .history-modal-content { max-height: 80vh; display: flex; flex-direction: column; align-items: center; }
+        .history-chat-container { flex: 1; width: 100%; background: var(--bg-main); border-radius: 10px; margin: 15px 0; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; max-height: 300px; text-align: left; }
+        .history-chat-container .msg-bubble { font-size: 13px; padding: 6px 10px; cursor: default; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Login Screen -->
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <div class="logo-area"><i class="fa-brands fa-whatsapp" style="color: #25d366; font-size: 65px;"></i></div>
+            <h2>Fnix Chat</h2>
+            <p>लॉगिन करें और जुड़ें</p>
+            <div class="input-group">
+                <input type="email" id="email-input" placeholder="email id(Optional)">
+                <input type="tel" id="phone-input" placeholder="Mobile Number (Main ID)" required>
+                <div class="pwd-wrapper">
+                    <input type="password" id="password-input" placeholder="Create a strong password." required>
+                    <i class="fa-solid fa-eye" id="toggle-pwd"></i>
+                </div>
+            </div>
+            <button id="login-btn">Log in<i class="fa-solid fa-arrow-right"></i></button>
+        </div>
+    </div>
+
+    <!-- 2. Main App Screen -->
+    <div id="app-screen" class="screen hidden">
+        <header class="main-header">
+            <h1 class="app-logo">Fnix Chat</h1>
+            <div class="header-icons"><i class="fa-solid fa-magnifying-glass" id="trigger-search"></i></div>
+            <div class="search-container" id="search-box-wrapper">
+                <i class="fa-solid fa-arrow-left" id="close-search"></i>
+                <input type="text" id="chat-search-input" placeholder="नाम या नंबर खोजें...">
+            </div>
+        </header>
+
+        <main class="content-body">
+            <!-- Chats Tab -->
+            <section id="chats-tab" class="tab-content">
+                <div class="chat-list" id="chat-list-container"></div>
+                <button class="fab-btn" id="open-add-contact"><i class="fa-solid fa-plus"></i></button>
+            </section>
+
+            <!-- Settings & Profile Tab -->
+            <section id="settings-tab" class="tab-content hidden" style="padding: 20px;">
+                <div class="profile-edit-box">
+                    <img src="https://via.placeholder.com/80/00a884/ffffff?text=DP" id="my-profile-pic-preview">
+                    <input type="file" id="upload-dp-input" style="display: none;" accept="image/*">
+                    <h3 style="margin-bottom: 5px;">मेरी प्रोफाइल</h3>
+                    <input type="text" id="edit-my-name" placeholder="अपना नाम लिखें">
+                    <input type="text" id="edit-my-status" placeholder="अपना बायो / स्टेटस लिखें">
+                    <button id="save-profile-btn">प्रोफाइल अपडेट करें</button>
+                </div>
+
+                <div id="theme-toggle" style="cursor: pointer; display: flex; gap: 15px; align-items: center; margin-top: 20px;">
+                    <i class="fa-solid fa-moon" style="font-size: 22px;"></i>
+                    <div><h3>थीम बदलें</h3><p style="color:var(--text-muted)">लाइट / डार्क मोड</p></div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Chat Window -->
+        <div id="personal-chat-window" class="chat-window hidden">
+            <header class="chat-window-header">
+                <i class="fa-solid fa-arrow-left" id="back-to-list" style="cursor: pointer; font-size: 20px;"></i>
+                <img src="" class="avatar" id="chat-window-avatar" style="width: 40px; height: 40px; border-radius: 50%;">
+                <div class="active-user-details">
+                    <h3 id="target-chat-title">यूज़र</h3>
+                    <p style="font-size: 12px; color: var(--accent);">Online</p>
+                </div>
+            </header>
+
+            <div class="chat-bg-overlay" id="chat-messages-container"></div>
+
+            <footer class="chat-footer-wrapper">
+                <input type="file" id="hidden-file-sharer" style="display: none;">
+                <div class="chat-input-footer">
+                    <div class="input-actions-box">
+                        <i class="fa-regular fa-face-smile" id="emoji-panel-trigger"></i>
+                        <input type="text" id="main-message-input" placeholder="मैसेज टाइप करें...">
+                        <i class="fa-solid fa-paperclip" id="file-access-trigger"></i>
+                    </div>
+                    <button id="main-send-btn" class="action-circle-btn"><i class="fa-solid fa-paper-plane" id="mic-icon"></i></button>
+                </div>
+                <div class="emoji-tray hidden" id="emoji-tray-box">
+                    <span>😀</span><span>😂</span><span>😍</span><span>🥰</span><span>😉</span><span>😎</span><span>🙏</span><span>👍</span>
+                    <span>🔥</span><span>❤️</span><span>🎉</span><span>😭</span><span>😡</span><span>😱</span><span>🤔</span><span>👏</span>
+                </div>
+            </footer>
+        </div>
+
+        <nav class="bottom-nav">
+            <div class="nav-item active" onclick="switchTab('chats-tab', this)"><i class="fa-regular fa-comment-dots"></i><span>Chats</span></div>
+            <div class="nav-item" onclick="switchTab('settings-tab', this)"><i class="fa-solid fa-user-gear"></i><span>Settings</span></div>
+        </nav>
+    </div>
+
+    <!-- Contact Add Modal -->
+    <div id="contact-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h3>नया कांटेक्ट जोड़ें</h3>
+            <input type="text" id="new-contact-name" placeholder="दोस्त का नाम">
+            <input type="tel" id="new-contact-phone" placeholder="मोबाइल नंबर (उनका Main ID)">
+            <input type="email" id="new-contact-email" placeholder="Gmail ID (Optional)">
+            <div class="modal-buttons">
+                <button style="background:transparent; color:var(--text-muted);" id="close-modal">रद्द करें</button>
+                <button style="background:var(--accent); color:white;" id="save-contact-btn">सेव और चैट करें</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact History Popup Modal -->
+    <div id="history-modal" class="modal-overlay hidden">
+        <div class="modal-content history-modal-content">
+            <div class="avatar" id="hist-avatar" style="width:70px; height:70px; font-size:28px; margin-bottom:10px;"></div>
+            <h3 id="hist-name">नाम</h3>
+            <p id="hist-gmail" style="color:var(--accent); font-size: 13px;"></p>
+            <p id="hist-phone" style="color:var(--text-muted); font-size: 13px; margin-bottom: 5px;"></p>
+            <p style="font-size: 12px; background: var(--bg-input); padding: 5px 10px; border-radius: 15px;">Read-Only Chat History</p>
+            
+            <div id="hist-chat-list" class="history-chat-container">
+                <!-- History loads here -->
+            </div>
+
+            <button id="close-history-modal" style="background:var(--bg-input); color:white; padding: 10px 20px; border:none; border-radius:8px; cursor:pointer; width:100%;">बंद करें</button>
+        </div>
+    </div>
+
+    <!-- Firebase Script -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, serverTimestamp, doc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxSK0oNoUP1L1OrfxUGTpLNrJxluqiLaA",
+            authDomain: "bunnii-media-2.firebaseapp.com",
+            projectId: "bunnii-media-2",
+            storageBucket: "bunnii-media-2.appspot.com",
+            messagingSenderId: "706339694572",
+            appId: "1:706339694572:web:a7fe3efb4a008b6ea942c9",
+            measurementId: "G-1JEFDCG6GW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        let currentUserPhone = "";
+        let currentUserEmail = "";
+        let currentTargetChat = "";
+        let currentRoomId = ""; 
+        let allContacts = [];
+        let allMessagesCache = []; // To cache messages for history popup
+
+        // --- PASSWORD TOGGLE LOGIC ---
+        const pwdInput = document.getElementById('password-input');
+        document.getElementById('toggle-pwd').addEventListener('click', function() {
+            if(pwdInput.type === 'password') {
+                pwdInput.type = 'text';
+                this.className = 'fa-solid fa-eye-slash';
+            } else {
+                pwdInput.type = 'password';
+                this.className = 'fa-solid fa-eye';
+            }
+        });
+
+        // --- LOGIN LOGIC ---
+        document.getElementById('login-btn').addEventListener('click', () => {
+            const phone = document.getElementById('phone-input').value.trim();
+            const email = document.getElementById('email-input').value.trim();
+            const pwd = pwdInput.value.trim();
+
+            if (phone !== "" && pwd.length >= 4) {
+                currentUserPhone = phone;
+                currentUserEmail = email;
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('app-screen').classList.remove('hidden');
+                loadChatContacts();
+                loadMyProfile();
+                startGlobalMessageSync(); // Sync all messages globally for history
+            } else { 
+                alert("मोबाइल नंबर और मजबूत पासवर्ड (कम से कम 4 अक्षर) दर्ज करें!"); 
+            }
+        });
+
+        // --- ROOM ID GENERATOR (For True 1-to-1 Sync) ---
+        function getRoomId(phone1, phone2) {
+            if(phone2 === 'global') return 'global';
+            return phone1 < phone2 ? phone1 + "_" + phone2 : phone2 + "_" + phone1;
+        }
+
+        // --- CONTACTS & LIST RENDER ---
+        document.getElementById('open-add-contact').addEventListener('click', () => document.getElementById('contact-modal').classList.remove('hidden'));
+        document.getElementById('close-modal').addEventListener('click', () => document.getElementById('contact-modal').classList.add('hidden'));
+
+        document.getElementById('save-contact-btn').addEventListener('click', () => {
+            const name = document.getElementById('new-contact-name').value.trim();
+            const phone = document.getElementById('new-contact-phone').value.trim();
+            const email = document.getElementById('new-contact-email').value.trim();
+            if(name && phone) {
+                let contacts = JSON.parse(localStorage.getItem('chat_contacts') || "[]");
+                if(!contacts.some(c => c.phone === phone)) {
+                    contacts.push({name, phone, email});
+                    localStorage.setItem('chat_contacts', JSON.stringify(contacts));
+                }
+                document.getElementById('contact-modal').classList.add('hidden');
+                loadChatContacts();
+            }
+        });
+
+        window.loadChatContacts = function() {
+            let contacts = JSON.parse(localStorage.getItem('chat_contacts') || "[]");
+            if(contacts.length === 0) contacts = [{name: "ग्लोबल पब्लिक रूम", phone: "global", email: "global@app.com"}];
+            allContacts = contacts;
+            renderContacts(allContacts);
+        };
+
+        function renderContacts(list) {
+            const container = document.getElementById('chat-list-container');
+            container.innerHTML = "";
+            list.forEach(contact => {
+                const item = document.createElement('div');
+                item.className = 'chat-item';
+                
+                // Avatar Area (Opens History Popup)
+                const avatarDiv = document.createElement('div');
+                avatarDiv.className = 'avatar';
+                avatarDiv.innerText = contact.name[0].toUpperCase();
+                avatarDiv.onclick = (e) => {
+                    e.stopPropagation(); // Prevents opening chat window
+                    openHistoryPopup(contact);
+                };
+
+                // Info Area (Opens Chat Window)
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'chat-info';
+                infoDiv.innerHTML = `<div class="chat-row"><span class="chat-name">${contact.name}</span></div><div class="chat-row"><p class="chat-preview">${contact.phone}</p></div>`;
+                infoDiv.onclick = () => openChatWindow(contact.name, contact.phone);
+
+                item.appendChild(avatarDiv);
+                item.appendChild(infoDiv);
+                container.appendChild(item);
+            });
+        }
+
+        // --- HISTORY POPUP LOGIC ---
+        function openHistoryPopup(contact) {
+            document.getElementById('hist-avatar').innerText = contact.name[0].toUpperCase();
+            document.getElementById('hist-name').innerText = contact.name;
+            document.getElementById('hist-phone').innerText = "📞 " + contact.phone;
+            document.getElementById('hist-gmail').innerText = contact.email ? "✉️ " + contact.email : "✉️ No Email Provided";
+            
+            const histContainer = document.getElementById('hist-chat-list');
+            histContainer.innerHTML = "";
+            
+            const targetRoomId = getRoomId(currentUserPhone, contact.phone);
+            
+            // Filter cached messages
+            const chatHistory = allMessagesCache.filter(m => m.roomId === targetRoomId);
+            
+            if(chatHistory.length === 0) {
+                histContainer.innerHTML = "<p style='text-align:center; color:gray; font-size:12px;'>कोई चैट हिस्ट्री नहीं मिली।</p>";
+            } else {
+                chatHistory.forEach(msg => {
+                    const isMe = msg.sender === currentUserPhone;
+                    const b = document.createElement('div');
+                    b.className = `msg-bubble ${isMe ? 'outgoing' : 'incoming'}`;
+                    b.innerHTML = `<p>${msg.message}</p>`;
+                    histContainer.appendChild(b);
+                });
+            }
+
+            document.getElementById('history-modal').classList.remove('hidden');
+        }
+
+        document.getElementById('close-history-modal').onclick = () => document.getElementById('history-modal').classList.add('hidden');
+
+        // --- PROFILE EDIT SETTINGS ---
+        const dpPreview = document.getElementById('my-profile-pic-preview');
+        const uploadDpInput = document.getElementById('upload-dp-input');
+        const nameEdit = document.getElementById('edit-my-name');
+        const statusEdit = document.getElementById('edit-my-status');
+
+        dpPreview.onclick = () => uploadDpInput.click();
+
+        uploadDpInput.onchange = (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => dpPreview.src = evt.target.result;
+                reader.readAsDataURL(file);
+            }
+        };
+
+        function loadMyProfile() {
+            const profile = JSON.parse(localStorage.getItem('my_profile_' + currentUserPhone) || "{}");
+            if(profile.name) nameEdit.value = profile.name;
+            if(profile.status) statusEdit.value = profile.status;
+            if(profile.dpUrl) dpPreview.src = profile.dpUrl;
+        }
+
+        document.getElementById('save-profile-btn').onclick = () => {
+            const pData = { name: nameEdit.value, status: statusEdit.value, dpUrl: dpPreview.src };
+            localStorage.setItem('my_profile_' + currentUserPhone, JSON.stringify(pData));
+            alert("प्रोफाइल सफलतापूर्वक सेव हो गई!");
+        };
+
+        // --- GLOBAL MESSAGE SYNC (For live history & chat) ---
+        let globalUnsubscribe = null;
+        function startGlobalMessageSync() {
+            if(globalUnsubscribe) globalUnsubscribe();
+            const q = query(collection(db, "chats"), orderBy("timestamp", "asc"));
+            globalUnsubscribe = onSnapshot(q, (snap) => {
+                allMessagesCache = [];
+                snap.forEach(doc => {
+                    allMessagesCache.push({ id: doc.id, ...doc.data() });
+                });
+                if(!document.getElementById('personal-chat-window').classList.contains('hidden')) {
+                    renderCurrentChatWindow(); // Refresh open chat if any
+                }
+            });
+        }
+
+        // --- CHAT WINDOW LOGIC ---
+        window.openChatWindow = function(name, targetPhone) {
+            currentTargetChat = targetPhone;
+            currentRoomId = getRoomId(currentUserPhone, targetPhone);
+            document.getElementById('target-chat-title').innerText = name;
+            document.getElementById('chat-window-avatar').src = `https://via.placeholder.com/40/00a884/ffffff?text=${name[0].toUpperCase()}`;
+            document.getElementById('personal-chat-window').classList.remove('hidden');
+            renderCurrentChatWindow();
+        };
+
+        function renderCurrentChatWindow() {
+            const container = document.getElementById('chat-messages-container');
+            container.innerHTML = "";
+            const activeChats = allMessagesCache.filter(m => m.roomId === currentRoomId);
+            
+            activeChats.forEach(data => {
+                const isOutgoing = data.sender === currentUserPhone;
+                const time = data.timestamp ? new Date(data.timestamp.seconds * 1000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'अभी';
+                
+                let body = `<p>${data.message}</p>`;
+                if(data.fileUrl) {
+                    body = `<img src="${data.fileUrl}" class="media-preview-img" />`;
+                }
+
+                const msgNode = document.createElement('div');
+                msgNode.className = `msg-bubble ${isOutgoing ? 'outgoing' : 'incoming'}`;
+                msgNode.innerHTML = `${body}<span class="msg-meta">${time}</span>`;
+                
+                // Allow deleting own messages inside active chat window
+                if(isOutgoing) {
+                    msgNode.onclick = async () => {
+                        if(confirm("क्या आप इस मैसेज को डिलीट करना चाहते हैं?")) {
+                            await deleteDoc(doc(db, "chats", data.id));
+                        }
+                    };
+                }
+                container.appendChild(msgNode);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // --- SENDING MESSAGES ---
+        const mainMessageInput = document.getElementById('main-message-input');
+        document.getElementById('main-send-btn').onclick = async () => {
+            const txt = mainMessageInput.value.trim();
+            if(!txt) return;
+            await addDoc(collection(db, "chats"), {
+                sender: currentUserPhone,
+                roomId: currentRoomId, 
+                message: txt,
+                timestamp: serverTimestamp()
+            });
+            mainMessageInput.value = "";
+            document.getElementById('emoji-tray-box').classList.add('hidden');
+        };
+
+        // File/Image send integration
+        document.getElementById('file-access-trigger').onclick = () => document.getElementById('hidden-file-sharer').click();
+        document.getElementById('hidden-file-sharer').onchange = (e) => {
+            const file = e.target.files[0];
+            if(!file) return;
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                await addDoc(collection(db, "chats"), {
+                    sender: currentUserPhone, roomId: currentRoomId,
+                    message: "📎 Image", fileUrl: evt.target.result, timestamp: serverTimestamp()
+                });
+            };
+            reader.readAsDataURL(file);
+        };
+
+        document.getElementById('emoji-panel-trigger').onclick = () => document.getElementById('emoji-tray-box').classList.toggle('hidden');
+        document.getElementById('emoji-tray-box').querySelectorAll('span').forEach(s => {
+            s.onclick = () => mainMessageInput.value += s.innerText;
+        });
+
+    </script>
+
+    <script>
+        function switchTab(tabId, element) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        document.getElementById('back-to-list').addEventListener('click', () => {
+            document.getElementById('personal-chat-window').classList.add('hidden');
+        });
+
+        document.getElementById('theme-toggle').addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+        });
+    </script>
+</body>
+</html>

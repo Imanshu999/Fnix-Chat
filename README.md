@@ -1,2 +1,0 @@
-# Fnix-Chat
-My page
